@@ -1,0 +1,5 @@
+ray[serve]
+transformers
+torch
+prometheus_client
+requests

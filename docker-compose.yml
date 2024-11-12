@@ -1,0 +1,59 @@
+services:
+  ray:
+    image: "rayproject/ray:nightly-py312"
+    container_name: ray
+    restart: unless-stopped
+    command: [
+      "ray", "start", 
+      "--head",
+      "--port=6379",  #   default Ray port
+      "--ray-client-server-port=10001",  # Explicit Ray client port
+      "--block",
+      "--metrics-export-port=8080",
+      "--include-dashboard=true",
+      "--dashboard-host=0.0.0.0"  # Allow external dashboard access
+    ]
+    ports:
+      - "8265:8265"  # Ray Dashboard
+      - "6379:6379"  # Ray internal communication
+      - "8080:8080"  # Ray Metrics Export
+      - "10001:10001"  # Ray Client Server
+      - "8000:8000"  # Ray Serve HTTP
+    environment:
+      - RAY_PROMETHEUS_NAME=prometheus
+    shm_size: "4gb"
+    networks:
+      - ray_network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    ports:
+      - "9091:9090"
+    networks:
+      - ray_network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    networks:
+      - ray_network
+
+networks:
+  ray_network:
+    driver: bridge
+
+volumes:
+  grafana-storage:
